@@ -2,9 +2,10 @@ module Main exposing (..)
 
 
 import Browser
-import Html exposing (..)
-import Svg
-import Svg.Attributes as Svg
+import Html as Html exposing (Html)
+import Svg as S
+import Svg.Attributes as SA
+import Svg.Events as SE
 
 
 import Graph exposing (Graph)
@@ -18,33 +19,34 @@ type alias Path = List Int
 
 
 type MyTree a
-    = Leaf a
+    = Stop
+    | Leaf a
     | Branch (Array (MyTree a))
 
 
 type alias Model =
-    { focus : Maybe (List Int)
-    , tree : MyTree Condition
-    , graph : Graph Condition ()
+    { focus : Maybe Path
+    , tree : MyTree ()
+    , graph : Graph ( Path, Condition ) ()
     }
 
 
 type Condition
-    = NotDetermined
-    | SetToBeLeaf
-    | SetToBeBranch
+    = IsLeaf
+    | IsBranch
 
 
 type Msg
-    = Select (List Int)
-    | ConvertToLeaf (List Int)
-    | ConvertToBranch (List Int)
+    = Select Path
+    | ConvertToLeaf Path
+    | ConvertToBranch Path
+    | AddLeaf Path
 
 
 init : Model
 init =
     let
-        tree = Leaf NotDetermined
+        tree = Leaf ()
     in
         { focus = Nothing
         , tree = tree
@@ -53,33 +55,96 @@ init =
 
 
 update : Msg -> Model -> Model
-update _ model = model
+update msg model =
+    case msg of
+        Select path ->
+            { model
+            | focus = Just path
+            }
+        ConvertToLeaf path ->
+            let
+                nextTree =
+                    modifyMyTree
+                        (\otherPath t ->
+                            if otherPath == path then
+                                Just <| Leaf ()
+                            else Just t
+                        )
+                        model.tree
+            in
+                { model
+                | tree = nextTree
+                , graph = myTreeToGraph nextTree
+                }
+        ConvertToBranch path ->
+            let
+                nextTree =
+                    modifyMyTree
+                        (\otherPath t ->
+                            if otherPath == path then
+                                Just <| Branch Array.empty
+                            else Just t
+                        )
+                        model.tree
+            in
+                { model
+                | tree = nextTree
+                , graph = myTreeToGraph nextTree
+                }
+        AddLeaf path ->
+            let
+                nextTree =
+                    modifyMyTree
+                        (\otherPath t ->
+                            if otherPath == path then
+                                Just <| case t of
+                                    Branch leaves -> Branch <| Array.push (Leaf ()) leaves
+                                    _ -> t
+                            else Just t
+                        )
+                        model.tree
+            in
+                { model
+                | tree = nextTree
+                , graph = myTreeToGraph nextTree
+                }
 
 
-
-nodeCtx : Geom.Position -> Graph.NodeContext Condition () -> Html Msg
-nodeCtx { x, y } { node } =
-     Svg.text_
-        [ Svg.transform <| translateTo x y
-        , Svg.dominantBaseline "hanging"
-        , Svg.alignmentBaseline "hanging"
+nodeCtx : Geom.Position -> Graph.NodeContext ( Path, Condition ) () -> Html Msg
+nodeCtx pos { node } =
+    S.g
+        [ SA.transform <| translateTo pos.x pos.y
         ]
-        [ text <|
-            case node.label of
-                NotDetermined -> "not determined"
-                SetToBeLeaf -> "leaf"
-                SetToBeBranch -> "branch"
-        ]
+        (
+            ( S.rect
+                [ SA.width "70", SA.height "70"
+                , SA.stroke "black"
+                , SA.strokeWidth "1"
+                , SA.fill "transparent"
+                ]
+                []
+            )
+        :: case node.label of
+                ( path, IsLeaf ) ->
+                    [ quickText { x = 25, y = 10 } "🍁"
+                    , quickClickableText (ConvertToBranch path) { x = 20, y = 30 } "to 🌿"
+                    ]
+                ( path, IsBranch )  ->
+                    [ quickText { x = 25, y = 10 } "🌿"
+                    , quickClickableText (AddLeaf path) { x = 20, y = 30 } "add 🍁"
+                    , quickClickableText (ConvertToBranch path) { x = 20, y = 45 } "to 🍁"
+                    ]
+        )
 
 
 view : Model -> Html Msg
 view model =
-    div
+    Html.div
         [ ]
         [ Render.graph
             Render.defaultOptions
             (\pos nodes ctx -> nodeCtx pos ctx)
-            (always { width = 40, height = 40})
+            (always { width = 70, height = 70 })
             model.graph
         ]
 
@@ -103,6 +168,7 @@ foldMyTree f =
             case tree of
                 Leaf a -> f a prevB
                 Branch _ -> prevB
+                Stop -> prevB
         )
 
 
@@ -116,29 +182,32 @@ foldMyTreeWithPath f =
     let
         innerFold ip ib itree =
             case itree of
+                Stop -> f ip itree ib
                 Leaf _ -> f ip itree ib
                 Branch array ->
                     Array.foldl
                         (\(idx, iit) iib -> innerFold (ip ++ [ idx ]) iib iit)
-                        (innerFold ip ib itree)
+                        (f ip itree ib) {- (innerFold ip ib itree) -}
                         <| Array.indexedMap Tuple.pair
                         <| array
     in
         innerFold []
 
 
-myTreeToGraph : MyTree a -> Graph a ()
+myTreeToGraph : MyTree () -> Graph ( Path, Condition ) ()
 myTreeToGraph tree =
     let
         foldF path itree ( ns, es ) =
             case itree of
-                Leaf a ->
-                    ( Graph.Node (pathToId path) a :: ns
+                Stop ->
+                    ( ns, es )
+                Leaf _ ->
+                    ( Graph.Node (pathToId path) ( path, IsLeaf ) :: ns
                     , es
                     )
                 Branch trees ->
                     -- leaves will be visited separately
-                    ( ns
+                    ( Graph.Node (pathToId path) ( path, IsBranch ) :: ns
                     ,
                         (trees
                         |> Array.indexedMap Tuple.pair
@@ -154,7 +223,7 @@ myTreeToGraph tree =
                         ) ++ es
                     )
         (nodes, edges) = foldMyTreeWithPath foldF ( [], [] ) tree
-    in Graph.fromNodesAndEdges (Debug.log "nodes" nodes) edges
+    in Graph.fromNodesAndEdges nodes edges
 
 
 
@@ -166,6 +235,50 @@ pathToId path =
         |> List.indexedMap
             (\idx pos -> pos * (100 ^ (pathLen - 1 - idx))) -- FIXME: not very reliable
         |> List.sum
+
+
+modifyMyTree : (Path -> MyTree a -> Maybe (MyTree a)) -> MyTree a -> MyTree a
+modifyMyTree f =
+    let
+        innerFold ip itree =
+            case itree of
+                Branch array ->
+                    Branch
+                        <| Array.map
+                            (\(idx, iit) -> innerFold (ip ++ [ idx ]) iit)
+                        <| Array.indexedMap Tuple.pair
+                        <| array
+                _ ->
+                    case f ip itree of
+                        Just replacementTree -> replacementTree
+                        Nothing -> Stop
+    in
+        innerFold []
+
+
+quickText : Geom.Position -> String -> Html msg
+quickText { x, y } string =
+    S.text_
+        [ SA.transform <| translateTo x y
+        , SA.dominantBaseline "hanging"
+        , SA.alignmentBaseline "hanging"
+        ]
+        [ S.text string
+        ]
+
+
+quickClickableText : msg -> Geom.Position -> String -> Html msg
+quickClickableText msg { x, y } string =
+    S.text_
+        [ SA.transform <| translateTo x y
+        , SA.dominantBaseline "hanging"
+        , SA.alignmentBaseline "hanging"
+        , SE.onClick msg
+        , SA.style "cursor: pointer"
+        ]
+        [ Html.text string
+        ]
+
 
 
 {- toParentId : List Int -> Int
