@@ -132,7 +132,7 @@ nodeCtx pos { node } =
                 ( path, IsBranch )  ->
                     [ quickText { x = 25, y = 10 } "🌿"
                     , quickClickableText (AddLeaf path) { x = 20, y = 30 } "add 🍁"
-                    , quickClickableText (ConvertToBranch path) { x = 20, y = 45 } "to 🍁"
+                    , quickClickableText (ConvertToLeaf path) { x = 20, y = 45 } "to 🍁"
                     ]
         )
 
@@ -231,29 +231,35 @@ pathToId : List Int -> Int
 pathToId path =
     let
         pathLen = List.length path
-    in path
-        |> List.indexedMap
-            (\idx pos -> pos * (100 ^ (pathLen - 1 - idx))) -- FIXME: not very reliable
-        |> List.sum
+    in
+        if pathLen > 0 then
+            path
+                |> List.indexedMap
+                    (\idx pos -> pos * (100 ^ (pathLen - 1 - idx))) -- FIXME: not very reliable
+                |> List.sum
+        else -1
 
 
 modifyMyTree : (Path -> MyTree a -> Maybe (MyTree a)) -> MyTree a -> MyTree a
 modifyMyTree f =
     let
-        innerFold ip itree =
+        modifyF ip itree =
             case itree of
                 Branch array ->
-                    Branch
+                    case f ip
+                        <| Branch
                         <| Array.map
-                            (\(idx, iit) -> innerFold (ip ++ [ idx ]) iit)
+                            (\(idx, iit) -> modifyF (ip ++ [ idx ]) iit)
                         <| Array.indexedMap Tuple.pair
-                        <| array
+                        <| array of
+                            Just nextBranch -> nextBranch
+                            Nothing -> Stop
                 _ ->
                     case f ip itree of
                         Just replacementTree -> replacementTree
                         Nothing -> Stop
     in
-        innerFold []
+        modifyF []
 
 
 quickText : Geom.Position -> String -> Html msg
