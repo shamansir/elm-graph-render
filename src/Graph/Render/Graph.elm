@@ -18,14 +18,29 @@ type alias NodesPositions = IntDict Geom.Position -- Dict Graph.NodeId Geom.Posi
 type Gap = Gap Float
 
 
+type RenderOptions msg
+    = Waterfall
+        { defs : Render.Defs msg
+        , gap : Float
+        }
+    -- | Circular {..}
+
+
+defaultOptions : RenderOptions msg
+defaultOptions =
+    Waterfall
+        { defs = Render.noDefs
+        , gap = 10.0
+        }
+
+
 graph
-    :  Render.Defs msg
-    -> Gap
+    :  RenderOptions msg
     -> (Geom.Position -> NodesPositions -> Graph.NodeContext n e -> Html msg) --
     -> (n -> { width : Float, height : Float })
     -> Graph n e
     -> Html msg
-graph defs_ gap renderNode sizeOfNode g =
+graph (Waterfall opts) renderNode sizeOfNode g =
     let
         forest = Graph.dfsForest (G.noParentsNodes g) g
         forestGeom = Geom.add (.node >> .label >> sizeOfNode) forest
@@ -36,7 +51,7 @@ graph defs_ gap renderNode sizeOfNode g =
                 |> ID.fromList
     in
     Render.forestGeometry
-        defs_
+        opts.defs
         (\pos -> renderNode pos positions)
         forestGeom
 
@@ -49,13 +64,12 @@ graph defs_ gap renderNode sizeOfNode g =
 
 
 graph_
-    :  Render.Defs msg
-    -> Gap
+    :  RenderOptions msg
     -> (Geom.Position -> Graph.NodeContext n e -> Html msg)
     -> (n -> { width : Float, height : Float })
     -> Graph n e
     -> Html msg
-graph_ defs_ gap renderNode sizeOfNode g =
+graph_ (Waterfall opts) renderNode sizeOfNode g =
     let
         nodes = g |> Graph.nodes |> List.map .label
     in
@@ -116,14 +130,14 @@ graph_ defs_ gap renderNode sizeOfNode g =
             {- /Topological -}
 
             {--}
-            |> distributeByHeight gap (.node >> .label >> sizeOfNode >> .height)
+            |> distributeByHeight (Gap opts.gap) (.node >> .label >> sizeOfNode >> .height)
             |> List.map (\(y, ctx) -> renderNode { x = 0, y = y } ctx)
             {--}
 
-            |> ((::) (Svg.defs [] <| Render.unDefs defs_))
+            |> ((::) (Svg.defs [] <| Render.unDefs opts.defs))
             |> Svg.svg
                 [ Svg.width "1000px"
-                , Svg.height <| String.fromFloat (totalHeight gap (sizeOfNode >> .height) nodes) ++ "px"
+                , Svg.height <| String.fromFloat (totalHeight (Gap opts.gap) (sizeOfNode >> .height) nodes) ++ "px"
                 ]
 
 -- distributeByHeight : Float -> (a -> Float) -> List a -> List (Float, a)
