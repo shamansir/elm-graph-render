@@ -14,6 +14,8 @@ import Array exposing (Array)
 import Graph.Tree.Geometry as Geom
 import Graph.Render.Graph as Render
 
+import IntDict
+
 
 type alias Path = List Int
 
@@ -110,31 +112,61 @@ update msg model =
                 }
 
 
-nodeCtx : Geom.Position -> Graph.NodeContext ( Path, Condition ) () -> Html Msg
-nodeCtx pos { node } =
-    S.g
-        [ SA.transform <| translateTo pos.x pos.y
-        ]
-        (
-            ( S.rect
-                [ SA.width "70", SA.height "70"
-                , SA.stroke "black"
-                , SA.strokeWidth "1"
-                , SA.fill "transparent"
-                ]
-                []
-            )
-        :: case node.label of
-                ( path, IsLeaf ) ->
-                    [ quickText { x = 25, y = 10 } "🍁"
-                    , quickClickableText (ConvertToBranch path) { x = 20, y = 30 } "to 🌿"
-                    ]
-                ( path, IsBranch )  ->
-                    [ quickText { x = 25, y = 10 } "🌿"
-                    , quickClickableText (AddLeaf path) { x = 20, y = 30 } "add 🍁"
-                    , quickClickableText (ConvertToLeaf path) { x = 20, y = 45 } "to 🍁"
-                    ]
+renderEdges : Geom.Position -> Render.NodesPositions -> Graph.Adjacency () -> Html Msg
+renderEdges from nodesPositions =
+    S.g [] << List.map Tuple.second << IntDict.toList << IntDict.map
+        (\otherNodeId _ ->
+            case IntDict.get otherNodeId nodesPositions of
+                Just otherNodePos ->
+                    S.line
+                        [ SA.x1 <| String.fromFloat from.x
+                        , SA.y1 <| String.fromFloat from.y
+                        , SA.x2 <| String.fromFloat otherNodePos.x
+                        , SA.y2 <| String.fromFloat otherNodePos.y
+                        , SA.stroke "rgba(0,0,0,0.5)"
+                        , SA.strokeWidth "2"
+                        ]
+                        []
+                Nothing ->
+                    S.g [] []
         )
+
+
+nodeCtx : Render.NodesPositions -> Geom.Position -> Graph.NodeContext ( Path, Condition ) () -> Html Msg
+nodeCtx nodesPositions pos { node, outgoing } =
+    S.g
+        []
+        <| S.g
+            [ SA.transform <| translateTo pos.x pos.y
+            ]
+            (
+                ( S.rect
+                    [ SA.width "70", SA.height "70"
+                    , SA.stroke "black"
+                    , SA.strokeWidth "1"
+                    , SA.fill "transparent"
+                    ]
+                    []
+                )
+            :: case node.label of
+                    ( path, IsLeaf ) ->
+                        [ showId { x = 0, y = 0 } node.id
+                        , quickText { x = 25, y = 10 } "🍁"
+                        , quickClickableText (ConvertToBranch path) { x = 20, y = 30 } "to 🌿"
+                        ]
+                    ( path, IsBranch ) ->
+                        [ showId { x = 0, y = 0 } node.id
+                        , quickText { x = 25, y = 10 } "🌿"
+                        , quickClickableText (AddLeaf path) { x = 20, y = 30 } "add 🍁"
+                        , quickClickableText (ConvertToLeaf path) { x = 20, y = 45 } "to 🍁"
+                        ]
+            )
+        ::
+        case node.label of
+            ( _, IsLeaf ) ->
+                []
+            ( _, IsBranch ) ->
+                [ renderEdges pos nodesPositions outgoing ]
 
 
 view : Model -> Html Msg
@@ -143,7 +175,7 @@ view model =
         [ ]
         [ Render.graph
             Render.defaultOptions
-            (\pos nodes ctx -> nodeCtx pos ctx)
+            (\pos nodes ctx -> nodeCtx nodes pos ctx)
             (always { width = 70, height = 70 })
             model.graph
         ]
@@ -223,7 +255,7 @@ myTreeToGraph tree =
                         ) ++ es
                     )
         (nodes, edges) = foldMyTreeWithPath foldF ( [], [] ) tree
-    in Graph.fromNodesAndEdges nodes edges
+    in Graph.fromNodesAndEdges (Debug.log "nodes" nodes) edges
 
 
 
@@ -235,7 +267,7 @@ pathToId path =
         if pathLen > 0 then
             path
                 |> List.indexedMap
-                    (\idx pos -> pos * (100 ^ (pathLen - 1 - idx))) -- FIXME: not very reliable
+                    (\idx pos -> (pos + 1) * (100 ^ (pathLen - 1 - idx))) -- FIXME: not very reliable
                 |> List.sum
         else -1
 
@@ -262,12 +294,26 @@ modifyMyTree f =
         modifyF []
 
 
+showId : Geom.Position -> Int -> Html msg
+showId { x, y } id =
+    S.text_
+        [ SA.transform <| translateTo x y
+        , SA.dominantBaseline "hanging"
+        , SA.alignmentBaseline "hanging"
+        , SA.fontSize "8"
+        , SA.fill "gray"
+        ]
+        [ S.text <| String.fromInt id
+        ]
+
+
 quickText : Geom.Position -> String -> Html msg
 quickText { x, y } string =
     S.text_
         [ SA.transform <| translateTo x y
         , SA.dominantBaseline "hanging"
         , SA.alignmentBaseline "hanging"
+        , SA.fontSize "12"
         ]
         [ S.text string
         ]
@@ -279,6 +325,7 @@ quickClickableText msg { x, y } string =
         [ SA.transform <| translateTo x y
         , SA.dominantBaseline "hanging"
         , SA.alignmentBaseline "hanging"
+        , SA.fontSize "12"
         , SE.onClick msg
         , SA.style "cursor: pointer"
         ]
