@@ -14,10 +14,17 @@ import Array exposing (Array)
 import Graph.Tree.Geometry as Geom
 import Graph.Render.Graph as Render
 
-import IntDict
+import IntDict exposing (IntDict)
+import Html.Attributes exposing (default)
 
 
 type alias Path = List Int
+
+
+type alias Size = { width: Float, height : Float }
+
+
+type alias Sizes = IntDict Size
 
 
 type MyTree a
@@ -30,6 +37,7 @@ type alias Model =
     { focus : Maybe Path
     , tree : MyTree ()
     , graph : Graph ( Path, Condition ) ()
+    , sizes : Sizes
     }
 
 
@@ -43,6 +51,11 @@ type Msg
     | ConvertToLeaf Path
     | ConvertToBranch Path
     | AddLeaf Path
+    | Remove Path
+    | IncreaseWidth Path
+    | IncreaseHeight Path
+    | DecreaseWidth Path
+    | DecreaseHeight Path
 
 
 init : Model
@@ -53,6 +66,7 @@ init =
         { focus = Nothing
         , tree = tree
         , graph = myTreeToGraph tree
+        , sizes = IntDict.empty |> IntDict.insert -1 defaultSize
         }
 
 
@@ -109,20 +123,86 @@ update msg model =
                 { model
                 | tree = nextTree
                 , graph = myTreeToGraph nextTree
+                -- , sizes = model.sizes |> IntDict.insert (pathToId path) defaultSize
+                -- FIXME: that sets the size for parent
                 }
+        Remove path ->
+            let
+                nextTree =
+                    modifyMyTree
+                        (\otherPath t ->
+                            if otherPath == path then
+                                Nothing -- Just Stop
+                            else Just t
+                        )
+                        model.tree
+            in
+                { model
+                | tree = nextTree
+                , graph = myTreeToGraph nextTree
+                , sizes = model.sizes |> IntDict.remove (pathToId path)
+                }
+        IncreaseWidth path ->
+            { model
+            | sizes =
+                IntDict.update
+                    (pathToId path)
+                    (\v -> case v of
+                        Just { width, height } -> Just { width = min 150 <| width + 10, height = height }
+                        Nothing -> Just { defaultSize | width = defaultSize.width + 10 }
+                    )
+                    model.sizes
+            }
+        IncreaseHeight path ->
+            { model
+            | sizes =
+                IntDict.update
+                    (pathToId path)
+                    (\v -> case v of
+                        Just { width, height } -> Just { width = width, height = min 150 <| height + 10 }
+                        Nothing -> Just { defaultSize | height = defaultSize.height + 10 }
+                    )
+                    model.sizes
+            }
+        DecreaseWidth path ->
+            { model
+            | sizes =
+                IntDict.update
+                    (pathToId path)
+                    (\v -> case v of
+                        Just { width, height } -> Just { width = max 10 <| width - 10, height = height }
+                        Nothing -> Just { defaultSize | width = defaultSize.width - 10 }
+                    )
+                    model.sizes
+            }
+        DecreaseHeight path ->
+            { model
+            | sizes =
+                IntDict.update
+                    (pathToId path)
+                    (\v -> case v of
+                        Just { width, height } -> Just { width = width, height = max 10 <| height - 10 }
+                        Nothing -> Just { defaultSize | height = defaultSize.height - 10 }
+                    )
+                    model.sizes
+            }
 
 
-renderEdges : Geom.Position -> Render.NodesPositions -> Graph.Adjacency () -> Html Msg
-renderEdges from nodesPositions =
+renderEdges : Size -> Geom.Position -> Sizes -> Render.NodesPositions -> Graph.Adjacency () -> Html Msg
+renderEdges size from sizes nodesPositions =
     S.g [] << List.map Tuple.second << IntDict.toList << IntDict.map
         (\otherNodeId _ ->
+            -- case Maybe.map2 Tuple.pair (IntDict.get otherNodeId nodesPositions) (IntDict.get otherNodeId sizes) of
             case IntDict.get otherNodeId nodesPositions of
                 Just otherNodePos ->
-                    S.line
-                        [ SA.x1 <| String.fromFloat from.x
-                        , SA.y1 <| String.fromFloat from.y
-                        , SA.x2 <| String.fromFloat otherNodePos.x
-                        , SA.y2 <| String.fromFloat otherNodePos.y
+                    let
+                        otherNodeSize = IntDict.get otherNodeId sizes
+                                            |> Maybe.withDefault defaultSize
+                    in S.line
+                        [ SA.x1 <| String.fromFloat (from.x + size.width / 2)
+                        , SA.y1 <| String.fromFloat (from.y + size.height / 2)
+                        , SA.x2 <| String.fromFloat (otherNodePos.x + otherNodeSize.width / 2)
+                        , SA.y2 <| String.fromFloat (otherNodePos.y + otherNodeSize.height / 2)
                         , SA.stroke "rgba(0,0,0,0.5)"
                         , SA.strokeWidth "2"
                         ]
@@ -132,16 +212,22 @@ renderEdges from nodesPositions =
         )
 
 
-nodeCtx : Render.NodesPositions -> Geom.Position -> Graph.NodeContext ( Path, Condition ) () -> Html Msg
-nodeCtx nodesPositions pos { node, outgoing } =
-    S.g
+nodeCtx : Sizes -> Render.NodesPositions -> Geom.Position -> Graph.NodeContext ( Path, Condition ) () -> Html Msg
+nodeCtx sizes nodesPositions pos { node, outgoing } =
+    let
+        size =
+            sizes
+                |> IntDict.get (pathToId <| Tuple.first <| node.label)
+                |> Maybe.withDefault defaultSize
+    in S.g
         []
         <| S.g
             [ SA.transform <| translateTo pos.x pos.y
             ]
             (
                 ( S.rect
-                    [ SA.width "70", SA.height "70"
+                    [ SA.width <| String.fromFloat size.width
+                    , SA.height <| String.fromFloat size.height
                     , SA.stroke "black"
                     , SA.strokeWidth "1"
                     , SA.fill "transparent"
@@ -153,12 +239,20 @@ nodeCtx nodesPositions pos { node, outgoing } =
                         [ showId { x = 0, y = 0 } node.id
                         , quickText { x = 25, y = 10 } "🍁"
                         , quickClickableText (ConvertToBranch path) { x = 20, y = 30 } "to 🌿"
+                        , quickClickableText (IncreaseWidth path) { x = 10, y = 55 } "+w"
+                        , quickClickableText (DecreaseWidth path) { x = 25, y = 55 } "-w"
+                        , quickClickableText (IncreaseHeight path) { x = 40, y = 55 } "+h"
+                        , quickClickableText (DecreaseHeight path) { x = 55, y = 55 } "-h"
                         ]
                     ( path, IsBranch ) ->
                         [ showId { x = 0, y = 0 } node.id
                         , quickText { x = 25, y = 10 } "🌿"
                         , quickClickableText (AddLeaf path) { x = 20, y = 30 } "add 🍁"
                         , quickClickableText (ConvertToLeaf path) { x = 20, y = 45 } "to 🍁"
+                        , quickClickableText (IncreaseWidth path) { x = 10, y = 55 } "+w"
+                        , quickClickableText (DecreaseWidth path) { x = 25, y = 55 } "-w"
+                        , quickClickableText (IncreaseHeight path) { x = 40, y = 55 } "+h"
+                        , quickClickableText (DecreaseHeight path) { x = 55, y = 55 } "-h"
                         ]
             )
         ::
@@ -166,7 +260,10 @@ nodeCtx nodesPositions pos { node, outgoing } =
             ( _, IsLeaf ) ->
                 []
             ( _, IsBranch ) ->
-                [ renderEdges pos nodesPositions outgoing ]
+                [ renderEdges size pos sizes nodesPositions outgoing ]
+
+
+defaultSize = { width = 70, height = 70 }
 
 
 view : Model -> Html Msg
@@ -175,8 +272,14 @@ view model =
         [ ]
         [ Render.graph
             Render.defaultOptions
-            (\pos nodes ctx -> nodeCtx nodes pos ctx)
-            (always { width = 70, height = 70 })
+            (\pos nodes ctx ->
+                nodeCtx model.sizes nodes pos ctx
+            )
+            (\(path, _) ->
+                case IntDict.get (pathToId path) model.sizes of
+                    Just nodeSize -> nodeSize
+                    Nothing -> defaultSize
+            )
             model.graph
         ]
 
@@ -255,11 +358,11 @@ myTreeToGraph tree =
                         ) ++ es
                     )
         (nodes, edges) = foldMyTreeWithPath foldF ( [], [] ) tree
-    in Graph.fromNodesAndEdges (Debug.log "nodes" nodes) edges
+    in Graph.fromNodesAndEdges nodes edges
 
 
 
-pathToId : List Int -> Int
+pathToId : Path -> Int
 pathToId path =
     let
         pathLen = List.length path
