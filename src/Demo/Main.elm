@@ -1,4 +1,4 @@
-module Main exposing (..)
+module Demo.Main exposing (..)
 
 
 import Browser
@@ -236,7 +236,7 @@ nodeCtx sizes nodesPositions pos { node, outgoing } =
                 )
             :: case node.label of
                     ( path, IsLeaf ) ->
-                        [ showId { x = 0, y = 0 } node.id
+                        [ showId { x = 5, y = 5 } node.id
                         , quickText { x = 25, y = 10 } "🍁"
                         , quickClickableText (ConvertToBranch path) { x = 20, y = 30 } "to 🌿"
                         , quickClickableText (IncreaseWidth path) { x = 10, y = 55 } "+w"
@@ -245,7 +245,7 @@ nodeCtx sizes nodesPositions pos { node, outgoing } =
                         , quickClickableText (DecreaseHeight path) { x = 55, y = 55 } "-h"
                         ]
                     ( path, IsBranch ) ->
-                        [ showId { x = 0, y = 0 } node.id
+                        [ showId { x = 5, y = 5 } node.id
                         , quickText { x = 25, y = 10 } "🌿"
                         , quickClickableText (AddLeaf path) { x = 20, y = 30 } "add 🍁"
                         , quickClickableText (ConvertToLeaf path) { x = 20, y = 45 } "to 🍁"
@@ -360,6 +360,37 @@ myTreeToGraph tree =
         (nodes, edges) = foldMyTreeWithPath foldF ( [], [] ) tree
     in Graph.fromNodesAndEdges nodes edges
 
+
+
+-- TODO: clear sizes using this function when converting branch to a leaf or removing node
+childrenAt : Path -> MyTree a -> List ( Path, Condition )
+childrenAt path t =
+    let
+        visitNode : Path -> MyTree a -> List ( Path, Condition )
+        visitNode rpath node =
+            if List.isEmpty rpath then
+                case node of
+                    Leaf _ -> [ ( path, IsLeaf ) ]
+                    Branch leaves -> ( path, IsBranch ) :: (List.concat <| Array.toList <| Array.map (visitNode rpath) leaves)
+                    Stop -> []
+            else
+                case node of
+                    Leaf _ -> [] -- no children at path
+                    Branch leaves ->
+                        let
+                            reversedPath =  List.reverse path
+                            maybeTopIdx = List.head reversedPath
+                        in
+                            case maybeTopIdx of
+                                Just topIdx ->
+                                    case Maybe.map2 Tuple.pair (Array.get topIdx leaves) (List.tail reversedPath) of
+                                        Just ( lnode, reversedTail ) ->
+                                            visitNode (List.reverse reversedTail) lnode
+                                        Nothing -> []
+                                Nothing -> []
+
+                    Stop -> [] -- no children at path
+    in visitNode path t
 
 
 pathToId : Path -> Int
