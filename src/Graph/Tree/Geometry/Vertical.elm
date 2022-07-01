@@ -41,10 +41,13 @@ addForest itemSize =
                         rootPos =
                             { x =
                                 if List.length children > 0 then
-                                    childrenArea.width / 2  - rootSize.width / 2
+                                    max 0 (childrenArea.width / 2 - rootSize.width / 2)
                                 else 0
                             , y = 0
                             }
+
+                        moveToCenter =
+                            List.map <| Tree.map (addX <| (rootSize.width - childrenArea.width) / 2)
 
                     in
                         ( AreaSize
@@ -52,7 +55,9 @@ addForest itemSize =
                             , height = rootSize.height + childrenArea.height
                             }
                         , Tree.inner ( rootPos, a )
-                            <| shiftedChildren
+                            <| if childrenArea.width >= rootSize.width
+                                then shiftedChildren
+                                else shiftedChildren |> moveToCenter
                         )
 
                 Nothing ->
