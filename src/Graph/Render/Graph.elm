@@ -9,7 +9,7 @@ import Html exposing (Html)
 import IntDict as ID exposing (IntDict)
 
 import Graph.Tree.Geometry as Geom
-import Graph.Tree.Geometry.Vertical as Geom
+import Graph.Tree.Geometry.Radial as Geom
 import Graph.Render.Forest as Render
 
 

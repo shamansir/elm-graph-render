@@ -5,7 +5,7 @@ import Svg exposing (Svg)
 import Svg.Attributes as Svg
 import Html exposing (Html)
 import Graph.Tree.Geometry as G
-import Graph.Tree.Geometry.Vertical as G
+import Graph.Tree.Geometry.Radial as G
 
 
 type Defs msg = Defs (List (Svg msg))
