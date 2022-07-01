@@ -9,6 +9,7 @@ import Html exposing (Html)
 import IntDict as ID exposing (IntDict)
 
 import Graph.Tree.Geometry as Geom
+import Graph.Tree.Geometry.Vertical as Geom
 import Graph.Render.Forest as Render
 
 
@@ -43,7 +44,7 @@ graph
 graph (Waterfall opts) renderNode sizeOfNode g =
     let
         forest = Graph.dfsForest (G.noParentsNodes g) g
-        forestGeom = Geom.add (.node >> .label >> sizeOfNode) forest
+        forestGeom = Geom.addForest (.node >> .label >> sizeOfNode) forest
         positions =
             forestGeom
                 |> Geom.fold (\pos ctx list -> ( ctx.node.id, pos ) :: list) []

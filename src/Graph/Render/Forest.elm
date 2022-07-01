@@ -5,6 +5,7 @@ import Svg exposing (Svg)
 import Svg.Attributes as Svg
 import Html exposing (Html)
 import Graph.Tree.Geometry as G
+import Graph.Tree.Geometry.Vertical as G
 
 
 type Defs msg = Defs (List (Svg msg))
@@ -49,4 +50,4 @@ forest defs_ renderItem itemSize =
     -- let geometry = G.add itemSize f
     -- in ( geometry, forestGeometry renderItem geometry )
     forestGeometry defs_ renderItem
-    << G.add itemSize
+    << G.addForest itemSize
