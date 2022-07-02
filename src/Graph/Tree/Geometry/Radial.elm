@@ -31,6 +31,10 @@ addForest itemSize =
         addDimensions : Tree.Forest a -> Tree.Forest (ItemSize, a)
         addDimensions = List.map <| Tree.map <| \a -> ( ItemSize <| itemSize a, a )
 
+        center = { x = 200, y = 200 }
+
+        ring = { minRadius = 0, maxRadius = 200 }
+
         distributeForest : Sector -> Tree.Forest ( ItemSize, a ) -> ( Ring, Tree.Forest ( Position, a ) )
         distributeForest sector forest =
             let
@@ -44,25 +48,33 @@ addForest itemSize =
                     forest |> List.indexedMap
                         (\idx tree ->
                             case Tree.root tree of
-                                Just ( ( _ {- ItemSize rootSize -}, a ), children ) ->
+                                Just ( ( ItemSize rootSize, a ), children ) ->
                                     let
                                         treeSector =
                                             { minDegree = toFloat idx * perRoot
                                             , maxDegree = (toFloat idx + 1) * perRoot
                                             }
+                                        rootAngle =
+                                            (treeSector.maxDegree - treeSector.minDegree) / 2
                                     in
-                                        Tree.inner ( { x = 0, y = 0 }, a )
+                                        Tree.inner
+                                            (
+                                                { x = center.x + (ring.maxRadius * cos (degrees rootAngle)) + (rootSize.width / 2)
+                                                , y = center.y + (ring.maxRadius * sin (degrees rootAngle)) + (rootSize.height / 2)
+                                                }
+                                            , a
+                                            )
                                             <| Tuple.second
                                             <| distributeForest treeSector children
                                 Nothing -> Tree.empty
                         )
             in
-                ( { minRadius = 0, maxRadius = 100 }, distributedBySector )
+                ( ring, distributedBySector )
 
 
         findAreaSize : ( Ring, Tree.Forest ( Position, a ) ) -> Geometry a
         findAreaSize =
-            Tuple.mapFirst (\ring -> AreaSize { width = ring.maxRadius, height = ring.maxRadius })
+            Tuple.mapFirst (\iring -> AreaSize { width = iring.maxRadius * 2, height = iring.maxRadius * 2 })
 
     in
         findAreaSize
