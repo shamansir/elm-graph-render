@@ -33,7 +33,8 @@ addForest itemSize =
 
         center = { x = 200, y = 200 }
 
-        ring = { minRadius = 0, maxRadius = 200 }
+        -- ring = { minRadius = 0, maxRadius = 200 }
+        distance = 20
 
         distributeForest : Sector -> Tree.Forest ( ItemSize, a ) -> ( Ring, Tree.Forest ( Position, a ) )
         distributeForest sector forest =
@@ -44,6 +45,18 @@ addForest itemSize =
 
                 rootsCount = onlyRoots |> List.filterMap identity |> List.length
                 perRoot = (sector.maxDegree - sector.minDegree) / toFloat rootsCount
+                {-
+                countLevels n tree =
+                    case Tree.root tree of
+                        Just ( _, children ) ->
+                            n + 1 + countForestLevels children
+                        Nothing ->
+                            n
+                countForestLevels f =
+                    List.foldl (+) 0 <| List.map (countLevels 0) f
+                -}
+                emptyRing = { minRadius = 0, maxRadius = 0 }
+                distributedBySector : List ( Ring, Tree.Tree ( Position, a ) )
                 distributedBySector =
                     forest |> List.indexedMap
                         (\idx tree ->
@@ -57,19 +70,36 @@ addForest itemSize =
                                         rootAngle =
                                             (treeSector.maxDegree - treeSector.minDegree) / 2
                                     in
-                                        Tree.inner
-                                            (
-                                                { x = center.x + (ring.maxRadius * cos (degrees rootAngle)) + (rootSize.width / 2)
-                                                , y = center.y + (ring.maxRadius * sin (degrees rootAngle)) + (rootSize.height / 2)
-                                                }
-                                            , a
-                                            )
-                                            <| Tuple.second
-                                            <| distributeForest treeSector children
-                                Nothing -> Tree.empty
+                                        case distributeForest treeSector children of
+                                            ( iring, innerForest )
+                                                ->
+                                                    (
+                                                        { minRadius = 0
+                                                        , maxRadius = iring.maxRadius + 1
+                                                        }
+                                                    , Tree.inner
+                                                        (
+                                                            { x = center.x + (iring.minRadius * cos (degrees rootAngle)) - (rootSize.width / 2)
+                                                            , y = center.y + (iring.minRadius * sin (degrees rootAngle)) - (rootSize.height / 2)
+                                                            }
+                                                        , a
+                                                        )
+                                                        innerForest
+                                                    )
+                                Nothing -> ( emptyRing, Tree.empty )
                         )
             in
-                ( ring, distributedBySector )
+                ( distributedBySector
+                    |> List.map Tuple.first
+                    |> List.foldl
+                            (\iring prevRing ->
+                                { minRadius = min iring.minRadius prevRing.minRadius
+                                , maxRadius = max iring.maxRadius prevRing.maxRadius
+                                }
+                            )
+                            { minRadius = 0, maxRadius = 100 }
+                , distributedBySector |> List.map Tuple.second
+                )
 
 
         findAreaSize : ( Ring, Tree.Forest ( Position, a ) ) -> Geometry a
