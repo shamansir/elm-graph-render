@@ -1,12 +1,19 @@
-module Graph.Tree.Geometry.Vertical exposing (..)
+module Graph.Tree.Geometry.Vertical exposing (Options, defaultOptions, addForest)
 
 
 import Graph.Tree as Tree
 import Graph.Tree.Geometry exposing (..)
 
 
-addForest : (a -> { width : Float, height : Float }) -> Tree.Forest a -> Geometry a
-addForest itemSize =
+type alias Options = ()
+
+
+defaultOptions : Options
+defaultOptions = ()
+
+
+addForest : Options -> (a -> { width : Float, height : Float }) -> Tree.Forest a -> Geometry a
+addForest _ itemSize =
     let
         addDimensions : Tree.Forest a -> Tree.Forest (ItemSize, a)
         addDimensions = List.map <| Tree.map <| \a -> ( ItemSize <| itemSize a, a )

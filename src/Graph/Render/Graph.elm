@@ -9,42 +9,34 @@ import Html exposing (Html)
 import IntDict as ID exposing (IntDict)
 
 import Graph.Tree.Geometry as Geom
-import Graph.Tree.Geometry.Radial as Geom
 import Graph.Render.Forest as Render
-
-
-type alias NodesPositions = IntDict Geom.Position -- Dict Graph.NodeId Geom.Position
 
 
 type Gap = Gap Float
 
 
-type RenderOptions msg
-    = Waterfall
-        { defs : Render.Defs msg
-        , gap : Float
-        }
-    -- | Circular {..}
+type alias NodesPositions = IntDict Geom.Position -- Dict Graph.NodeId Geom.Position
 
 
-defaultOptions : RenderOptions msg
-defaultOptions =
-    Waterfall
-        { defs = Render.noDefs
-        , gap = 10.0
-        }
+type alias RenderOptions msg a
+    = Render.Options msg a
+
+
+defaultOptions : RenderOptions msg a
+defaultOptions
+    = Render.defaultOptions
 
 
 graph
-    :  RenderOptions msg
+    :  RenderOptions msg (Graph.NodeContext n e)
     -> (Geom.Position -> NodesPositions -> Graph.NodeContext n e -> Html msg) --
     -> (n -> { width : Float, height : Float })
     -> Graph n e
     -> Html msg
-graph (Waterfall opts) renderNode sizeOfNode g =
+graph opts renderNode sizeOfNode g =
     let
         forest = Graph.dfsForest (G.noParentsNodes g) g
-        forestGeom = Geom.addForest (.node >> .label >> sizeOfNode) forest
+        forestGeom = Render.makeGeometry opts (.node >> .label >> sizeOfNode) forest -- Geom.addForest (.node >> .label >> sizeOfNode) forest
         positions =
             forestGeom
                 |> Geom.fold (\pos ctx list -> ( ctx.node.id, pos ) :: list) []
@@ -52,7 +44,7 @@ graph (Waterfall opts) renderNode sizeOfNode g =
                 |> ID.fromList
     in
     Render.forestGeometry
-        opts.defs
+        (opts |> Tuple.first)
         (\pos -> renderNode pos positions)
         forestGeom
 
@@ -65,14 +57,15 @@ graph (Waterfall opts) renderNode sizeOfNode g =
 
 
 graph_
-    :  RenderOptions msg
+    :  RenderOptions msg (Graph.NodeContext n e)
     -> (Geom.Position -> Graph.NodeContext n e -> Html msg)
     -> (n -> { width : Float, height : Float })
     -> Graph n e
     -> Html msg
-graph_ (Waterfall opts) renderNode sizeOfNode g =
+graph_ ((defs, _) as opts) renderNode sizeOfNode g =
     let
         nodes = g |> Graph.nodes |> List.map .label
+        gap = (Gap 40) -- Gap opts.gap
     in
         g
 
@@ -131,14 +124,14 @@ graph_ (Waterfall opts) renderNode sizeOfNode g =
             {- /Topological -}
 
             {--}
-            |> distributeByHeight (Gap opts.gap) (.node >> .label >> sizeOfNode >> .height)
+            |> distributeByHeight gap (.node >> .label >> sizeOfNode >> .height)
             |> List.map (\(y, ctx) -> renderNode { x = 0, y = y } ctx)
             {--}
 
-            |> ((::) (Svg.defs [] <| Render.unDefs opts.defs))
+            |> ((::) (Svg.defs [] <| Render.unDefs defs))
             |> Svg.svg
                 [ Svg.width "1000px"
-                , Svg.height <| String.fromFloat (totalHeight (Gap opts.gap) (sizeOfNode >> .height) nodes) ++ "px"
+                , Svg.height <| String.fromFloat (totalHeight gap (sizeOfNode >> .height) nodes) ++ "px"
                 ]
 
 -- distributeByHeight : Float -> (a -> Float) -> List a -> List (Float, a)

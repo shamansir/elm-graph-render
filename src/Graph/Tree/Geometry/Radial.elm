@@ -1,4 +1,4 @@
-module Graph.Tree.Geometry.Radial exposing (..)
+module Graph.Tree.Geometry.Radial exposing (Options, defaultOptions, addForest)
 
 
 import Graph.Tree as Tree
@@ -20,35 +20,60 @@ type alias Sector = { minDegree : Degree, maxDegree : Degree }
 type alias Ring = { minRadius : Radius, maxRadius : Radius }
 
 
+type alias Force = { x : Float, y : Float }
+
+
+
+type alias Options a =
+    { distanceBetweenRings : Float
+    , focusPoint : Maybe { x : Float, y : Float }
+    , zoom : Float
+    , forces : Maybe (a -> List Force)
+    }
+
+
+defaultOptions : Options a
+defaultOptions =
+    { distanceBetweenRings = 70
+    , focusPoint = Nothing
+    , zoom = 1.0
+    , forces = Nothing
+    }
+
 
 fullCircle : Sector
 fullCircle = { minDegree = 0, maxDegree = 360 }
 
 
-addForest : (a -> { width : Float, height : Float }) -> Tree.Forest a -> Geometry a
-addForest itemSize forest =
+addForest : Options a -> (a -> { width : Float, height : Float }) -> Tree.Forest a -> Geometry a
+addForest opts itemSize forest =
     let
         addDimensions : Tree.Forest a -> Tree.Forest (ItemSize, a)
         addDimensions = List.map <| Tree.map <| \a -> ( ItemSize <| itemSize a, a )
+        countLevels : Tree.Tree a -> Levels
         countLevels tree =
             case Tree.root tree of
                 Just ( _, children ) ->
                     if List.length children > 0 then 1 + countForestLevels children else 0
                 Nothing ->
                     0
+        countForestLevels : Tree.Forest a -> Levels
         countForestLevels f =
             Maybe.withDefault 0 <| List.maximum <| List.map countLevels f
+        levelsCount : Levels
         levelsCount = 1 + countForestLevels forest
 
-        -- ring = { minRadius = 0, maxRadius = 200 }
-        distanceBetweenRings = 70
-        fullRing = { minRadius = 0, maxRadius = levelsCount }
+        fullRing : Ring
+        fullRing = { minRadius = 0, maxRadius = toFloat levelsCount }
         area =
 
-            { width = fullRing.maxRadius * distanceBetweenRings * 2
-            , height = fullRing.maxRadius * distanceBetweenRings * 2
+            { width = fullRing.maxRadius * opts.distanceBetweenRings * 2
+            , height = fullRing.maxRadius * opts.distanceBetweenRings * 2
             }
-        center = { x = area.width / 2, y = area.height / 2 }
+        center =
+            case opts.focusPoint of
+                Just focus -> focus
+                Nothing -> { x = area.width / 2, y = area.height / 2 }
 
         distributeForest : Ring -> Sector -> Tree.Forest ( ItemSize, a ) -> Tree.Forest ( Position, a )
         distributeForest ring sector f =
@@ -81,8 +106,8 @@ addForest itemSize forest =
                                             children
                                             |> Tree.inner
                                                 (
-                                                    { x = center.x + (ring.minRadius * distanceBetweenRings * cos (degrees rootAngle)) - (rootSize.width / 2)
-                                                    , y = center.y + (ring.minRadius * distanceBetweenRings * sin (degrees rootAngle)) - (rootSize.height / 2)
+                                                    { x = center.x + (ring.minRadius * opts.distanceBetweenRings * cos (degrees rootAngle)) - (rootSize.width / 2)
+                                                    , y = center.y + (ring.minRadius * opts.distanceBetweenRings * sin (degrees rootAngle)) - (rootSize.height / 2)
                                                     }
                                                 , a
                                                 )
@@ -94,8 +119,8 @@ addForest itemSize forest =
 
     in
         ( AreaSize
-            { width = fullRing.maxRadius * distanceBetweenRings * 2
-            , height = fullRing.maxRadius * distanceBetweenRings * 2
+            { width = fullRing.maxRadius * opts.distanceBetweenRings * 2
+            , height = fullRing.maxRadius * opts.distanceBetweenRings * 2
             }
         , distributeForest fullRing fullCircle
             <| addDimensions
