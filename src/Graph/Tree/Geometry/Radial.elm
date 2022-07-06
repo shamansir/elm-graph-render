@@ -26,39 +26,42 @@ fullCircle = { minDegree = 0, maxDegree = 360 }
 
 
 addForest : (a -> { width : Float, height : Float }) -> Tree.Forest a -> Geometry a
-addForest itemSize =
+addForest itemSize forest =
     let
         addDimensions : Tree.Forest a -> Tree.Forest (ItemSize, a)
         addDimensions = List.map <| Tree.map <| \a -> ( ItemSize <| itemSize a, a )
-
-        center = { x = 200, y = 200 }
+        countLevels tree =
+            case Tree.root tree of
+                Just ( _, children ) ->
+                    if List.length children > 0 then 1 + countForestLevels children else 0
+                Nothing ->
+                    0
+        countForestLevels f =
+            List.foldl (+) 1 <| List.map countLevels f
+        levelsCount = countForestLevels forest-- |> Debug.log "levelsCount"
 
         -- ring = { minRadius = 0, maxRadius = 200 }
-        distance = 20
+        distanceBetweenRings = 70
+        fullRing = { minRadius = 0, maxRadius = levelsCount }
+        area =
 
-        distributeForest : Sector -> Tree.Forest ( ItemSize, a ) -> ( Ring, Tree.Forest ( Position, a ) )
-        distributeForest sector forest =
+            { width = fullRing.maxRadius * distanceBetweenRings * 2
+            , height = fullRing.maxRadius * distanceBetweenRings * 2
+            }
+        center = { x = area.width / 2, y = area.height / 2 }
+
+        distributeForest : Ring -> Sector -> Tree.Forest ( ItemSize, a ) -> Tree.Forest ( Position, a )
+        distributeForest ring sector f =
             let
                 extractRoot tree =
                     Tree.root tree |> Maybe.map Tuple.first
-                onlyRoots = forest |> List.map extractRoot
+                onlyRoots = f |> List.map extractRoot
 
                 rootsCount = onlyRoots |> List.filterMap identity |> List.length
                 perRoot = (sector.maxDegree - sector.minDegree) / toFloat rootsCount
-                {-
-                countLevels n tree =
-                    case Tree.root tree of
-                        Just ( _, children ) ->
-                            n + 1 + countForestLevels children
-                        Nothing ->
-                            n
-                countForestLevels f =
-                    List.foldl (+) 0 <| List.map (countLevels 0) f
-                -}
-                emptyRing = { minRadius = 0, maxRadius = 0 }
-                distributedBySector : List ( Ring, Tree.Tree ( Position, a ) )
+                distributedBySector : List ( Tree.Tree ( Position, a ) )
                 distributedBySector =
-                    forest |> List.indexedMap
+                    f |> List.indexedMap
                         (\idx tree ->
                             case Tree.root tree of
                                 Just ( ( ItemSize rootSize, a ), children ) ->
@@ -68,45 +71,33 @@ addForest itemSize =
                                             , maxDegree = (toFloat idx + 1) * perRoot
                                             }
                                         rootAngle =
-                                            (treeSector.maxDegree - treeSector.minDegree) / 2
+                                            treeSector.minDegree + (treeSector.maxDegree - treeSector.minDegree) / 2
                                     in
-                                        case distributeForest treeSector children of
-                                            ( iring, innerForest )
-                                                ->
-                                                    (
-                                                        { minRadius = 0
-                                                        , maxRadius = iring.maxRadius + 1
-                                                        }
-                                                    , Tree.inner
-                                                        (
-                                                            { x = center.x + (iring.minRadius * cos (degrees rootAngle)) - (rootSize.width / 2)
-                                                            , y = center.y + (iring.minRadius * sin (degrees rootAngle)) - (rootSize.height / 2)
-                                                            }
-                                                        , a
-                                                        )
-                                                        innerForest
-                                                    )
-                                Nothing -> ( emptyRing, Tree.empty )
+                                        distributeForest
+                                            { minRadius = ring.minRadius + 1
+                                            , maxRadius = ring.maxRadius
+                                            }
+                                            treeSector
+                                            children
+                                            |> Tree.inner
+                                                (
+                                                    { x = center.x + (ring.minRadius * distanceBetweenRings * cos (degrees rootAngle)) - (rootSize.width / 2)
+                                                    , y = center.y + (ring.minRadius * distanceBetweenRings * sin (degrees rootAngle)) - (rootSize.height / 2)
+                                                    }
+                                                , a
+                                                )
+                                Nothing -> Tree.empty
                         )
             in
-                ( distributedBySector
-                    |> List.map Tuple.first
-                    |> List.foldl
-                            (\iring prevRing ->
-                                { minRadius = min iring.minRadius prevRing.minRadius
-                                , maxRadius = max iring.maxRadius prevRing.maxRadius
-                                }
-                            )
-                            { minRadius = 0, maxRadius = 100 }
-                , distributedBySector |> List.map Tuple.second
-                )
+                distributedBySector
 
-
-        findAreaSize : ( Ring, Tree.Forest ( Position, a ) ) -> Geometry a
-        findAreaSize =
-            Tuple.mapFirst (\iring -> AreaSize { width = iring.maxRadius * 2, height = iring.maxRadius * 2 })
 
     in
-        findAreaSize
-            << distributeForest fullCircle
-            << addDimensions
+        ( AreaSize
+            { width = fullRing.maxRadius * distanceBetweenRings * 2
+            , height = fullRing.maxRadius * distanceBetweenRings * 2
+            }
+        , distributeForest fullRing fullCircle
+            <| addDimensions
+            <| forest
+        )
