@@ -37,8 +37,8 @@ addForest itemSize forest =
                 Nothing ->
                     0
         countForestLevels f =
-            List.foldl (+) 1 <| List.map countLevels f
-        levelsCount = countForestLevels forest-- |> Debug.log "levelsCount"
+            Maybe.withDefault 0 <| List.maximum <| List.map countLevels f
+        levelsCount = 1 + countForestLevels forest
 
         -- ring = { minRadius = 0, maxRadius = 200 }
         distanceBetweenRings = 70
@@ -67,8 +67,8 @@ addForest itemSize forest =
                                 Just ( ( ItemSize rootSize, a ), children ) ->
                                     let
                                         treeSector =
-                                            { minDegree = toFloat idx * perRoot
-                                            , maxDegree = (toFloat idx + 1) * perRoot
+                                            { minDegree = sector.minDegree + toFloat idx * perRoot
+                                            , maxDegree = sector.minDegree + (toFloat idx + 1) * perRoot
                                             }
                                         rootAngle =
                                             treeSector.minDegree + (treeSector.maxDegree - treeSector.minDegree) / 2
