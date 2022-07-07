@@ -46,8 +46,8 @@ type alias Model =
     , tree : MyTree ()
     , graph : Graph ( Path, Condition ) ()
     , sizes : Sizes
-    -- , zoom : Float
-    -- , focusPoint : Maybe { x : Float, y : Float }
+    , zoom : Float
+    , focusPoint : { x : Float, y : Float }
     }
 
 
@@ -67,6 +67,9 @@ type Msg
     | DecreaseWidth Path
     | DecreaseHeight Path
     | ChangeWay Way
+    | MoveFocus { x : Float, y : Float }
+    | ZoomIn
+    | ZoomOut
 
 
 init : Model
@@ -79,6 +82,8 @@ init =
         , tree = tree
         , graph = myTreeToGraph tree
         , sizes = IntDict.empty |> IntDict.insert -1 defaultSize
+        , zoom = 1.0
+        , focusPoint = { x = 0, y = 0 }
         }
 
 
@@ -202,6 +207,21 @@ update msg model =
             { model
             | way = way
             }
+        MoveFocus move ->
+            let
+                curPoint = model.focusPoint
+            in
+                { model
+                | focusPoint = { x = curPoint.x + move.x, y = curPoint.y + move.y }
+                }
+        ZoomIn ->
+            { model
+            | zoom = min 5 (model.zoom + 0.1)
+            }
+        ZoomOut ->
+            { model
+            | zoom = max 0 (model.zoom - 0.1)
+            }
 
 
 renderEdges : Size -> Geom.Position -> Sizes -> Render.NodesPositions -> Graph.Adjacency () -> Html Msg
@@ -292,7 +312,12 @@ view model =
                 Vertical ->
                     FRender.Vertical VR.defaultOptions
                 Radial ->
-                    FRender.Radial GR.defaultOptions
+                    let defaultOptions = GR.defaultOptions
+                    in FRender.Radial
+                        { defaultOptions
+                        | focusPoint = Just model.focusPoint
+                        , zoom = model.zoom
+                        }
             )
             (\pos nodes ctx ->
                 nodeCtx model.sizes nodes pos ctx
@@ -311,6 +336,30 @@ view model =
             [ H.button [ HE.onClick <| ChangeWay Vertical ] [ H.text "Vertical" ]
             , H.button [ HE.onClick <| ChangeWay Radial ] [ H.text "Radial" ]
             ]
+        , H.div
+            [ HA.style "position" "absolute"
+            , HA.style "right" "0"
+            , HA.style "top" "20px"
+            ]
+            <| case model.way of
+                Radial ->
+                    [ H.button [ HE.onClick <| MoveFocus { x = -10, y =   0 } ] [ H.text "<" ]
+                    , H.button [ HE.onClick <| MoveFocus { x =  10, y =   0 } ] [ H.text ">" ]
+                    , H.button [ HE.onClick <| MoveFocus { x = 0  , y = -10 } ] [ H.text "^" ]
+                    , H.button [ HE.onClick <| MoveFocus { x = 0  , y =  10 } ] [ H.text "V" ]
+                    ]
+                Vertical -> []
+        , H.div
+            [ HA.style "position" "absolute"
+            , HA.style "right" "0"
+            , HA.style "top" "40px"
+            ]
+            <| case model.way of
+                Radial ->
+                    [ H.button [ HE.onClick ZoomIn  ] [ H.text "+" ]
+                    , H.button [ HE.onClick ZoomOut ] [ H.text "-" ]
+                    ]
+                Vertical -> []
         ]
 
 

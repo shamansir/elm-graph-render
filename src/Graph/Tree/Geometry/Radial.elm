@@ -3,6 +3,7 @@ module Graph.Tree.Geometry.Radial exposing (Options, defaultOptions, addForest)
 
 import Graph.Tree as Tree
 import Graph.Tree.Geometry exposing (..)
+import Html.Attributes exposing (width)
 
 
 type alias Radius = Float
@@ -45,6 +46,19 @@ fullCircle : Sector
 fullCircle = { minDegree = 0, maxDegree = 360 }
 
 
+applyForces :  List Force -> { x : Float, y : Float } ->{ x : Float, y : Float }
+applyForces fs pos =
+    List.foldl (\np p -> { x = np.x + p.x, y = np.y + p.y }) pos fs
+
+
+zoomPos : Float -> { x : Float, y : Float } -> { x : Float, y : Float }
+zoomPos z { x, y } = { x = x * z, y = y * z }
+
+
+zoomArea : Float -> { width : Float, height : Float } -> { width : Float, height : Float }
+zoomArea z { width, height } = { width = width * z, height = height * z }
+
+
 addForest : Options a -> (a -> { width : Float, height : Float }) -> Tree.Forest a -> Geometry a
 addForest opts itemSize forest =
     let
@@ -69,12 +83,17 @@ addForest opts itemSize forest =
 
             { width = fullRing.maxRadius * opts.distanceBetweenRings * 2
             , height = fullRing.maxRadius * opts.distanceBetweenRings * 2
-            }
+            } |> zoomArea opts.zoom
         center =
             case opts.focusPoint of
-                Just focus -> focus
-                Nothing -> { x = area.width / 2, y = area.height / 2 }
-
+                Just focus ->
+                    { x = area.width / 2 - focus.x
+                    , y = area.height / 2 - focus.y
+                    }
+                Nothing ->
+                    { x = area.width / 2
+                    , y = area.height / 2
+                    }
         distributeForest : Ring -> Sector -> Tree.Forest ( ItemSize, a ) -> Tree.Forest ( Position, a )
         distributeForest ring sector f =
             let
@@ -108,7 +127,12 @@ addForest opts itemSize forest =
                                                 (
                                                     { x = center.x + (ring.minRadius * opts.distanceBetweenRings * cos (degrees rootAngle)) - (rootSize.width / 2)
                                                     , y = center.y + (ring.minRadius * opts.distanceBetweenRings * sin (degrees rootAngle)) - (rootSize.height / 2)
-                                                    }
+                                                    } |>
+                                                        ( case opts.forces of
+                                                            Just fs -> applyForces <| fs a
+                                                            Nothing -> identity
+                                                        )
+                                                      |> zoomPos opts.zoom
                                                 , a
                                                 )
                                 Nothing -> Tree.empty
@@ -118,10 +142,7 @@ addForest opts itemSize forest =
 
 
     in
-        ( AreaSize
-            { width = fullRing.maxRadius * opts.distanceBetweenRings * 2
-            , height = fullRing.maxRadius * opts.distanceBetweenRings * 2
-            }
+        ( AreaSize area
         , distributeForest fullRing fullCircle
             <| addDimensions
             <| forest
