@@ -1,16 +1,7 @@
-# elm-graph-visualize
+module Demo.DressUp exposing (..)
 
-Visualize Graphs in SVG.
 
-The `elm-community/graph` package is used to represent the graph data.
-
-Supports two ways of rendering: Vertical (top to bottom) and Radial (from the center, spreading leafes around).
-
-See `Demo/Main.elm` for the complex example with the ability to edit graph structure and node sizes.
-
-As another example, here is how to render a simple graph taken from `README` of the package (it doesn't have leaves with many children, but you can easily change it using `Tree.leaf` and `Tree.inner` helpers).
-
-```elm
+import Browser
 import IntDict as ID exposing (IntDict)
 import Html as H exposing (Html)
 import Svg as S
@@ -20,6 +11,10 @@ import Graph as G exposing (Graph)
 import Graph.Tree.Geometry as Geom
 import Graph.Render.Forest as Render
 import Graph.Render.Graph as Render
+
+
+type alias Size = { width: Float, height : Float }
+type alias Sizes = IntDict Size
 
 
 type alias Model = Graph String ()
@@ -65,6 +60,61 @@ dressUp =
 size = { width = 60, height = 60 }
 
 
+
+renderEdges : Geom.Position -> Render.NodesPositions -> G.Adjacency () -> Html msg
+renderEdges from nodesPositions =
+    S.g [] << List.map Tuple.second << ID.toList << ID.map
+        (\otherNodeId _ ->
+            case ID.get otherNodeId nodesPositions of
+                Just otherNodePos ->
+                    let
+                        otherNodeSize = size
+                    in S.line
+                        [ SA.x1 <| String.fromFloat (from.x + size.width / 2)
+                        , SA.y1 <| String.fromFloat (from.y + size.height / 2)
+                        , SA.x2 <| String.fromFloat (otherNodePos.x + otherNodeSize.width / 2)
+                        , SA.y2 <| String.fromFloat (otherNodePos.y + otherNodeSize.height / 2)
+                        , SA.stroke "rgba(0,0,0,0.5)"
+                        , SA.strokeWidth "2"
+                        ]
+                        []
+                Nothing ->
+                    S.g [] []
+        )
+
+
+renderNode : Geom.Position -> Render.NodesPositions -> G.NodeContext String () -> Html msg
+renderNode pos nodesPositions { node, outgoing } =
+    S.g
+        []
+        <| S.g
+            [ SA.transform <| "translate(" ++ String.fromFloat pos.x ++ "," ++ String.fromFloat pos.y ++ ")"
+            ]
+            [
+                S.rect
+                    [ SA.width <| String.fromFloat size.width
+                    , SA.height <| String.fromFloat size.height
+                    , SA.stroke "black"
+                    , SA.strokeWidth "1"
+                    , SA.fill "transparent"
+                    ]
+                    []
+            ,
+                S.text_
+                    [ SA.transform <| "translate(" ++ String.fromFloat (size.width / 2) ++ "," ++ String.fromFloat (size.height / 2) ++ ")"
+                    , SA.dominantBaseline "hanging"
+                    , SA.alignmentBaseline "hanging"
+                    , SA.textAnchor "middle"
+                    , SA.fontSize "15"
+                    , SA.fill "gray"
+                    ]
+                    [ S.text node.label
+                    ]
+            ]
+        :: renderEdges pos nodesPositions outgoing
+        :: []
+
+
 view : Model -> Html msg
 view model =
     Render.graph
@@ -81,48 +131,3 @@ main =
         , update = always identity
         , view = view
         }
-
-
-renderNode : Geom.Position -> Render.NodesPositions -> G.NodeContext String () -> Html msg
-renderNode pos nodesPositions { node, outgoing } =
-    S.g
-        []
-        <| S.g
-            [ SA.transform <| "translate(" ++ String.fromFloat pos.x ++ "," ++ String.fromFloat pos.y ++ ")"
-            ]
-            [
-                S.rect
-                    [ SA.width <| String.fromFloat size.width
-                    , SA.height <| String.fromFloat size.height
-                    ]
-                    []
-            ,
-                S.text_
-                    [ SA.transform <| "translate(" ++ String.fromFloat (size.width / 2) ++ "," ++ String.fromFloat (size.height / 2) ++ ")"
-                    ]
-                    [ S.text node.label
-                    ]
-            ]
-        :: renderEdges pos nodesPositions outgoing
-        :: []
-
-
-renderEdges : Geom.Position -> Render.NodesPositions -> G.Adjacency () -> Html msg
-renderEdges from nodesPositions =
-    S.g [] << List.map Tuple.second << ID.toList << ID.map
-        (\otherNodeId _ ->
-            case ID.get otherNodeId nodesPositions of
-                Just otherNodePos ->
-                    let
-                        otherNodeSize = size
-                    in S.line
-                        [ SA.x1 <| String.fromFloat (from.x + size.width / 2)
-                        , SA.y1 <| String.fromFloat (from.y + size.height / 2)
-                        , SA.x2 <| String.fromFloat (otherNodePos.x + otherNodeSize.width / 2)
-                        , SA.y2 <| String.fromFloat (otherNodePos.y + otherNodeSize.height / 2)
-                        ]
-                        []
-                Nothing ->
-                    S.g [] []
-        )
-```

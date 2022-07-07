@@ -1,4 +1,4 @@
-module Graph.Render.Graph exposing (graph, defaultOptions, NodesPositions)
+module Graph.Render.Graph exposing (graph, NodesPositions)
 
 import Graph exposing (Graph)
 import Graph.Extra as G
@@ -16,11 +16,6 @@ type Gap = Gap Float
 
 
 type alias NodesPositions = IntDict Geom.Position -- Dict Graph.NodeId Geom.Position
-
-
-defaultOptions : Render.Options msg a
-defaultOptions
-    = Render.defaultOptions
 
 
 graph
