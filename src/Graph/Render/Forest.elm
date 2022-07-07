@@ -1,5 +1,5 @@
 module Graph.Render.Forest exposing
-    ( Options, Way
+    ( Options, Way(..)
     , defaultOptions
     , defs, noDefs, unDefs, forest, forestGeometry
     , makeGeometry

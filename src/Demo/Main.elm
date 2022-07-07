@@ -2,20 +2,24 @@ module Demo.Main exposing (..)
 
 
 import Browser
-import Html as Html exposing (Html)
+
+import Html as H exposing (Html)
+import Html.Attributes as HA
+import Html.Events as HE
 import Svg as S
 import Svg.Attributes as SA
 import Svg.Events as SE
 
-
-import Graph exposing (Graph)
 import Array exposing (Array)
 
+import Graph exposing (Graph)
 import Graph.Tree.Geometry as Geom
 import Graph.Render.Graph as Render
+import Graph.Render.Forest as FRender
+import Graph.Tree.Geometry.Vertical as VR
+import Graph.Tree.Geometry.Radial as GR
 
 import IntDict exposing (IntDict)
-import Html.Attributes exposing (default)
 
 
 type alias Path = List Int
@@ -27,6 +31,9 @@ type alias Size = { width: Float, height : Float }
 type alias Sizes = IntDict Size
 
 
+type Way = Vertical | Radial
+
+
 type MyTree a
     = Stop
     | Leaf a
@@ -34,10 +41,13 @@ type MyTree a
 
 
 type alias Model =
-    { focus : Maybe Path
+    { way : Way
+    , focus : Maybe Path
     , tree : MyTree ()
     , graph : Graph ( Path, Condition ) ()
     , sizes : Sizes
+    -- , zoom : Float
+    -- , focusPoint : Maybe { x : Float, y : Float }
     }
 
 
@@ -56,6 +66,7 @@ type Msg
     | IncreaseHeight Path
     | DecreaseWidth Path
     | DecreaseHeight Path
+    | ChangeWay Way
 
 
 init : Model
@@ -63,7 +74,8 @@ init =
     let
         tree = Leaf ()
     in
-        { focus = Nothing
+        { way = Vertical
+        , focus = Nothing
         , tree = tree
         , graph = myTreeToGraph tree
         , sizes = IntDict.empty |> IntDict.insert -1 defaultSize
@@ -186,6 +198,10 @@ update msg model =
                     )
                     model.sizes
             }
+        ChangeWay way ->
+            { model
+            | way = way
+            }
 
 
 renderEdges : Size -> Geom.Position -> Sizes -> Render.NodesPositions -> Graph.Adjacency () -> Html Msg
@@ -268,10 +284,16 @@ defaultSize = { width = 70, height = 70 }
 
 view : Model -> Html Msg
 view model =
-    Html.div
+    H.div
         [ ]
         [ Render.graph
-            Render.defaultOptions
+            ( FRender.noDefs
+            , case model.way of
+                Vertical ->
+                    FRender.Vertical VR.defaultOptions
+                Radial ->
+                    FRender.Radial GR.defaultOptions
+            )
             (\pos nodes ctx ->
                 nodeCtx model.sizes nodes pos ctx
             )
@@ -281,6 +303,14 @@ view model =
                     Nothing -> defaultSize
             )
             model.graph
+        , H.div
+            [ HA.style "position" "absolute"
+            , HA.style "right" "0"
+            , HA.style "top" "0"
+            ]
+            [ H.button [ HE.onClick <| ChangeWay Vertical ] [ H.text "Vertical" ]
+            , H.button [ HE.onClick <| ChangeWay Radial ] [ H.text "Radial" ]
+            ]
         ]
 
 
@@ -463,7 +493,7 @@ quickClickableText msg { x, y } string =
         , SE.onClick msg
         , SA.style "cursor: pointer"
         ]
-        [ Html.text string
+        [ S.text string
         ]
 
 

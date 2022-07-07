@@ -1,4 +1,4 @@
-module Graph.Render.Graph exposing (..)
+module Graph.Render.Graph exposing (graph, defaultOptions, NodesPositions)
 
 import Graph exposing (Graph)
 import Graph.Extra as G
@@ -18,17 +18,13 @@ type Gap = Gap Float
 type alias NodesPositions = IntDict Geom.Position -- Dict Graph.NodeId Geom.Position
 
 
-type alias RenderOptions msg a
-    = Render.Options msg a
-
-
-defaultOptions : RenderOptions msg a
+defaultOptions : Render.Options msg a
 defaultOptions
     = Render.defaultOptions
 
 
 graph
-    :  RenderOptions msg (Graph.NodeContext n e)
+    :  Render.Options msg (Graph.NodeContext n e)
     -> (Geom.Position -> NodesPositions -> Graph.NodeContext n e -> Html msg) --
     -> (n -> { width : Float, height : Float })
     -> Graph n e
@@ -57,7 +53,7 @@ graph opts renderNode sizeOfNode g =
 
 
 graph_
-    :  RenderOptions msg (Graph.NodeContext n e)
+    :  Render.Options msg (Graph.NodeContext n e)
     -> (Geom.Position -> Graph.NodeContext n e -> Html msg)
     -> (n -> { width : Float, height : Float })
     -> Graph n e
