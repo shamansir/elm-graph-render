@@ -1,4 +1,4 @@
-module Graph.Render.Graph exposing (graph, NodesPositions)
+module Graph.Render.Svg.Graph exposing (graph, NodesPositions)
 
 import Graph exposing (Graph)
 import Graph.Extra as G
@@ -8,8 +8,8 @@ import Svg.Attributes as Svg
 import Html exposing (Html)
 import IntDict as ID exposing (IntDict)
 
-import Graph.Tree.Geometry as Geom
-import Graph.Render.Forest as Render
+import Graph.Geometry as Geom
+import Graph.Render.Svg.Forest as Render
 
 
 type Gap = Gap Float
@@ -20,10 +20,10 @@ type alias NodesPositions = IntDict Geom.Position -- Dict Graph.NodeId Geom.Posi
 
 graph
     :  Render.Options msg (Graph.NodeContext n e)
-    -> (Geom.Position -> NodesPositions -> Graph.NodeContext n e -> Html msg) --
+    -> (Geom.Position -> NodesPositions -> Graph.NodeContext n e -> Svg msg) --
     -> (n -> { width : Float, height : Float })
     -> Graph n e
-    -> Html msg
+    -> Svg msg
 graph opts renderNode sizeOfNode g =
     let
         forest = Graph.dfsForest (G.noParentsNodes g) g
@@ -49,10 +49,10 @@ graph opts renderNode sizeOfNode g =
 
 graph_
     :  Render.Options msg (Graph.NodeContext n e)
-    -> (Geom.Position -> Graph.NodeContext n e -> Html msg)
+    -> (Geom.Position -> Graph.NodeContext n e -> Svg msg)
     -> (n -> { width : Float, height : Float })
     -> Graph n e
-    -> Html msg
+    -> Svg msg
 graph_ ((defs, _) as opts) renderNode sizeOfNode g =
     let
         nodes = g |> Graph.nodes |> List.map .label

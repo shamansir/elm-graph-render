@@ -1,4 +1,4 @@
-module Graph.Render.Forest exposing
+module Graph.Render.Svg.Forest exposing
     ( Options, Way(..)
     , defaultOptions
     , defs, noDefs, unDefs, forest, forestGeometry
@@ -10,9 +10,9 @@ import Svg exposing (Svg)
 import Svg.Attributes as Svg
 import Html exposing (Html)
 
-import Graph.Tree.Geometry as G
-import Graph.Tree.Geometry.Vertical as GV
-import Graph.Tree.Geometry.Radial as GR
+import Graph.Geometry as G
+import Graph.Geometry.Vertical as GV
+import Graph.Geometry.Radial as GR
 
 
 type Way a
@@ -42,7 +42,7 @@ defaultOptions : Options msg a
 defaultOptions = ( noDefs, Vertical GV.defaultOptions )
 
 
-forestGeometry : Defs msg -> (G.Position -> a -> Html msg) -> G.Geometry a -> Html msg
+forestGeometry : Defs msg -> (G.Position -> a -> Html msg) -> G.Geometry a -> Svg msg
 forestGeometry defs_ renderItem geom =
     let
         area = G.areaSize geom
@@ -64,7 +64,7 @@ forestGeometry defs_ renderItem geom =
             <| geom
 
 
-forest : Options msg a -> (G.Position -> a -> Html msg) -> (a -> { width : Float, height : Float }) -> Tree.Forest a -> Html msg
+forest : Options msg a -> (G.Position -> a -> Html msg) -> (a -> { width : Float, height : Float }) -> Tree.Forest a -> Svg msg
 forest ( defs_, way ) renderItem itemSize =
     -- let geometry = G.add itemSize f
     -- in ( geometry, forestGeometry renderItem geometry )
@@ -75,5 +75,5 @@ forest ( defs_, way ) renderItem itemSize =
 makeGeometry : Options msg a -> (a -> { width : Float, height : Float }) -> Tree.Forest a -> G.Geometry a
 makeGeometry ( defs_, way ) itemSize =
     case way of
-            Vertical vopts -> GV.addForest vopts itemSize
-            Radial ropts -> GR.addForest ropts itemSize
+            Vertical vopts -> GV.make vopts itemSize
+            Radial ropts -> GR.make ropts itemSize

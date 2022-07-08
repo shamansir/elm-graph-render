@@ -13,11 +13,11 @@ import Svg.Events as SE
 import Array exposing (Array)
 
 import Graph exposing (Graph)
-import Graph.Tree.Geometry as Geom
-import Graph.Render.Graph as Render
-import Graph.Render.Forest as FRender
-import Graph.Tree.Geometry.Vertical as VR
-import Graph.Tree.Geometry.Radial as GR
+import Graph.Geometry as Geom
+import Graph.Geometry.Vertical as VR
+import Graph.Geometry.Radial as GR
+import Graph.Render.Svg.Graph as GRender
+import Graph.Render.Svg.Forest as FRender
 
 import IntDict exposing (IntDict)
 
@@ -224,7 +224,7 @@ update msg model =
             }
 
 
-renderEdges : Size -> Geom.Position -> Sizes -> Render.NodesPositions -> Graph.Adjacency () -> Html Msg
+renderEdges : Size -> Geom.Position -> Sizes -> GRender.NodesPositions -> Graph.Adjacency () -> Html Msg
 renderEdges size from sizes nodesPositions =
     S.g [] << List.map Tuple.second << IntDict.toList << IntDict.map
         (\otherNodeId _ ->
@@ -248,7 +248,7 @@ renderEdges size from sizes nodesPositions =
         )
 
 
-nodeCtx : Sizes -> Render.NodesPositions -> Geom.Position -> Graph.NodeContext ( Path, Condition ) () -> Html Msg
+nodeCtx : Sizes -> GRender.NodesPositions -> Geom.Position -> Graph.NodeContext ( Path, Condition ) () -> Html Msg
 nodeCtx sizes nodesPositions pos { node, outgoing } =
     let
         size =
@@ -306,7 +306,7 @@ view : Model -> Html Msg
 view model =
     H.div
         [ ]
-        [ Render.graph
+        [ GRender.graph
             ( FRender.noDefs
             , case model.way of
                 Vertical ->

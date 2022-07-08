@@ -5,11 +5,11 @@
     "license": "BSD-3-Clause",
     "version": "1.0.0",
     "exposed-modules": [
-        "Graph.Tree.Geometry",
-        "Graph.Tree.Geometry.Radial",
-        "Graph.Tree.Geometry.Vertical",
-        "Graph.Render.Forest",
-        "Graph.Render.Graph"
+        "Graph.Geometry",
+        "Graph.Geometry.Radial",
+        "Graph.Geometry.Vertical",
+        "Graph.Render.Svg.Forest",
+        "Graph.Render.Svg.Graph"
     ],
     "elm-version": "0.19.1 <= v < 0.20.0",
     "dependencies": {

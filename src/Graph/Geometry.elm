@@ -1,4 +1,4 @@
-module Graph.Tree.Geometry exposing
+module Graph.Geometry exposing
     ( Geometry
     , Position
     , none

@@ -8,9 +8,9 @@ import Svg as S
 import Svg.Attributes as SA
 
 import Graph as G exposing (Graph)
-import Graph.Tree.Geometry as Geom
-import Graph.Render.Forest as Render
-import Graph.Render.Graph as Render
+import Graph.Geometry as Geom
+import Graph.Render.Svg.Forest as Render
+import Graph.Render.Svg.Graph as Render
 
 
 type alias Size = { width: Float, height : Float }

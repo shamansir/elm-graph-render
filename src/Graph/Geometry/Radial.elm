@@ -1,8 +1,8 @@
-module Graph.Tree.Geometry.Radial exposing (Options, defaultOptions, addForest)
+module Graph.Geometry.Radial exposing (Options, defaultOptions, make)
 
 
 import Graph.Tree as Tree
-import Graph.Tree.Geometry exposing (..)
+import Graph.Geometry exposing (..)
 import Html.Attributes exposing (width)
 
 
@@ -59,8 +59,8 @@ zoomArea : Float -> { width : Float, height : Float } -> { width : Float, height
 zoomArea z { width, height } = { width = width * z, height = height * z }
 
 
-addForest : Options a -> (a -> { width : Float, height : Float }) -> Tree.Forest a -> Geometry a
-addForest opts itemSize forest =
+make : Options a -> (a -> { width : Float, height : Float }) -> Tree.Forest a -> Geometry a
+make opts itemSize forest =
     let
         addDimensions : Tree.Forest a -> Tree.Forest (ItemSize, a)
         addDimensions = List.map <| Tree.map <| \a -> ( ItemSize <| itemSize a, a )
