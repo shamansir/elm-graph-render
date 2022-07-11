@@ -6,7 +6,7 @@ import Browser
 import Html as H exposing (Html)
 import Html.Attributes as HA
 import Html.Events as HE
-import Svg as S
+import Svg as S exposing (Svg)
 import Svg.Attributes as SA
 import Svg.Events as SE
 
@@ -16,6 +16,8 @@ import Graph exposing (Graph)
 import Graph.Geometry as Geom
 import Graph.Geometry.Vertical as VR
 import Graph.Geometry.Radial as GR
+import Graph.Geometry.Make as Geom
+import Graph.Render.Svg.Defs as D
 import Graph.Render.Svg.Graph as GRender
 import Graph.Render.Svg.Forest as FRender
 
@@ -224,7 +226,7 @@ update msg model =
             }
 
 
-renderEdges : Size -> Geom.Position -> Sizes -> GRender.NodesPositions -> Graph.Adjacency () -> Html Msg
+renderEdges : Size -> Geom.Position -> Sizes -> GRender.NodesPositions -> Graph.Adjacency () -> Svg Msg
 renderEdges size from sizes nodesPositions =
     S.g [] << List.map Tuple.second << IntDict.toList << IntDict.map
         (\otherNodeId _ ->
@@ -248,7 +250,7 @@ renderEdges size from sizes nodesPositions =
         )
 
 
-nodeCtx : Sizes -> GRender.NodesPositions -> Geom.Position -> Graph.NodeContext ( Path, Condition ) () -> Html Msg
+nodeCtx : Sizes -> GRender.NodesPositions -> Geom.Position -> Graph.NodeContext ( Path, Condition ) () -> Svg Msg
 nodeCtx sizes nodesPositions pos { node, outgoing } =
     let
         size =
@@ -307,13 +309,12 @@ view model =
     H.div
         [ ]
         [ GRender.graph
-            ( FRender.noDefs
-            , case model.way of
+            ( case model.way of
                 Vertical ->
-                    FRender.Vertical VR.defaultOptions
+                    Geom.Vertical VR.defaultOptions
                 Radial ->
                     let defaultOptions = GR.defaultOptions
-                    in FRender.Radial
+                    in Geom.Radial
                         { defaultOptions
                         | focusPoint = Just model.focusPoint
                         , zoom = model.zoom
@@ -507,7 +508,7 @@ modifyMyTree f =
         modifyF []
 
 
-showId : Geom.Position -> Int -> Html msg
+showId : Geom.Position -> Int -> Svg msg
 showId { x, y } id =
     S.text_
         [ SA.transform <| translateTo x y
@@ -520,7 +521,7 @@ showId { x, y } id =
         ]
 
 
-quickText : Geom.Position -> String -> Html msg
+quickText : Geom.Position -> String -> Svg msg
 quickText { x, y } string =
     S.text_
         [ SA.transform <| translateTo x y
@@ -532,7 +533,7 @@ quickText { x, y } string =
         ]
 
 
-quickClickableText : msg -> Geom.Position -> String -> Html msg
+quickClickableText : msg -> Geom.Position -> String -> Svg msg
 quickClickableText msg { x, y } string =
     S.text_
         [ SA.transform <| translateTo x y

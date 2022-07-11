@@ -4,22 +4,55 @@ Visualize Graphs in SVG.
 
 The `elm-community/graph` package is used to represent the graph data.
 
-Supports two ways of rendering: Vertical (top to bottom) and Radial (from the center, spreading leafes around).
+Supports two ways of rendering: Vertical (top to bottom) and Radial (from the center, spreading leafes around). Items of the graph may have different sizes.
 
 See `Demo/Main.elm` for the complex example with the ability to edit graph structure and node sizes.
+
+# API
+
+To draw a graph to `SVG` use: `Graph.Render.Svg.Graph.graph` :
+
+In `Graph.Geometry.Make` you'll find options to switch from Vertical to Radial representation.
+
+`renderNode` is the function that takes position, and `NodeContext` of graph, so if needed you would be able to draw edges as well using `incoming`/`outgoing` lists and `NodesPositions` provided as the second argument.
+
+
+```elm
+import Graph.Render.Svg.Graph as Render
+import Graph.Geometry.Make as Geom
+
+
+myGraph : Graph n e
+myGraph = ...
+
+
+view =
+    Render.graph
+        Geom.defaultWay
+        renderNode
+        (always size)
+        model
+
+renderNode : Geom.Position -> Render.NodesPositions -> G.NodeContext n e -> Html msg
+renderNode {x, y} _ { label, incoming, outgoing } =
+    ...
+```
+
+# Full example
 
 As another example, here is how to render a simple graph taken from `README` of the package (it doesn't have leaves with many children, but you can easily change it using `Tree.leaf` and `Tree.inner` helpers).
 
 ```elm
 import IntDict as ID exposing (IntDict)
-import Html as H exposing (Html)
-import Svg as S
+
+import Html exposing (Html)
+import Svg as S exposing (Svg)
 import Svg.Attributes as SA
 
 import Graph as G exposing (Graph)
-import Graph.Tree.Geometry as Geom
-import Graph.Render.Forest as Render
-import Graph.Render.Graph as Render
+import Graph.Geometry as Geom
+import Graph.Geometry.Make as Geom
+import Graph.Render.Svg.Graph as Render
 
 
 type alias Model = Graph String ()
@@ -68,7 +101,7 @@ size = { width = 60, height = 60 }
 view : Model -> Html msg
 view model =
     Render.graph
-        Render.defaultOptions
+        Geom.defaultWay
         renderNode
         (always size)
         model
@@ -83,7 +116,7 @@ main =
         }
 
 
-renderNode : Geom.Position -> Render.NodesPositions -> G.NodeContext String () -> Html msg
+renderNode : Geom.Position -> Render.NodesPositions -> G.NodeContext String () -> Svg msg
 renderNode pos nodesPositions { node, outgoing } =
     S.g
         []
@@ -107,7 +140,7 @@ renderNode pos nodesPositions { node, outgoing } =
         :: []
 
 
-renderEdges : Geom.Position -> Render.NodesPositions -> G.Adjacency () -> Html msg
+renderEdges : Geom.Position -> Render.NodesPositions -> G.Adjacency () -> Svg msg
 renderEdges from nodesPositions =
     S.g [] << List.map Tuple.second << ID.toList << ID.map
         (\otherNodeId _ ->

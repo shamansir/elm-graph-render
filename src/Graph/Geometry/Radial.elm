@@ -1,5 +1,13 @@
-module Graph.Geometry.Radial exposing (Options, defaultOptions, make)
+module Graph.Geometry.Radial exposing (Options, Force, defaultOptions, make)
 
+
+{-|
+@docs make
+
+# Options
+
+@docs Options, defaultOptions, Force
+-}
 
 import Graph.Tree as Tree
 import Graph.Geometry exposing (..)
@@ -21,10 +29,11 @@ type alias Sector = { minDegree : Degree, maxDegree : Degree }
 type alias Ring = { minRadius : Radius, maxRadius : Radius }
 
 
+{-| Some vecrtor direction. -}
 type alias Force = { x : Float, y : Float }
 
 
-
+{-| -}
 type alias Options a =
     { distanceBetweenRings : Float
     , focusPoint : Maybe { x : Float, y : Float }
@@ -33,6 +42,7 @@ type alias Options a =
     }
 
 
+{-| -}
 defaultOptions : Options a
 defaultOptions =
     { distanceBetweenRings = 70
@@ -59,6 +69,7 @@ zoomArea : Float -> { width : Float, height : Float } -> { width : Float, height
 zoomArea z { width, height } = { width = width * z, height = height * z }
 
 
+{-| Calculate radial geometry of the given `Forest a`, using the function that provides size for each item. -}
 make : Options a -> (a -> { width : Float, height : Float }) -> Tree.Forest a -> Geometry a
 make opts itemSize forest =
     let

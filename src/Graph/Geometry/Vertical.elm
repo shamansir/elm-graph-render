@@ -1,17 +1,28 @@
 module Graph.Geometry.Vertical exposing (Options, defaultOptions, make)
 
 
+{-|
+@docs make
+
+# Options
+
+@docs Options, defaultOptions
+-}
+
 import Graph.Tree as Tree
 import Graph.Geometry exposing (..)
 
 
+{-| -}
 type alias Options = ()
 
 
+{-| -}
 defaultOptions : Options
 defaultOptions = ()
 
 
+{-| Calculate vertical flow `Geometry a` (positions together with items) of the given `Forest a`, using the function that provides size for each item. -}
 make : Options -> (a -> { width : Float, height : Float }) -> Tree.Forest a -> Geometry a
 make _ itemSize =
     let

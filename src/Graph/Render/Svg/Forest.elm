@@ -1,9 +1,13 @@
 module Graph.Render.Svg.Forest exposing
-    ( Options, Way(..)
-    , defaultOptions
-    , defs, noDefs, unDefs, forest, forestGeometry
-    , makeGeometry
+    ( forest, geometry
     )
+
+{-|
+
+# Rendering
+
+@docs forest, geometry
+-}
 
 import Graph.Tree as Tree
 import Svg exposing (Svg)
@@ -11,43 +15,18 @@ import Svg.Attributes as Svg
 import Html exposing (Html)
 
 import Graph.Geometry as G
-import Graph.Geometry.Vertical as GV
-import Graph.Geometry.Radial as GR
+import Graph.Geometry.Make exposing (Way)
+import Graph.Geometry.Make as Geometry
 
+import Graph.Render.Svg.Defs exposing (Defs, unDefs)
 
-type Way a
-    = Vertical GV.Options
-    | Radial (GR.Options a)
-
-
-type Defs msg = Defs (List (Svg msg))
-
-
-defs : List (Svg msg) -> Defs msg
-defs = Defs
-
-
-noDefs : Defs msg
-noDefs = defs []
-
-
-unDefs : Defs msg -> (List (Svg msg))
-unDefs (Defs list) = list
-
-
-type alias Options msg a = ( Defs msg, Way a )
-
-
-defaultOptions : Options msg a
-defaultOptions = ( noDefs, Vertical GV.defaultOptions )
-
-
-forestGeometry : Defs msg -> (G.Position -> a -> Html msg) -> G.Geometry a -> Svg msg
-forestGeometry defs_ renderItem geom =
+{-| Render precalculated Geometry (apply positions of the items) using the rendering function. -}
+geometry : Defs msg -> (G.Position -> a -> Svg msg) -> G.Geometry a -> Svg msg
+geometry defs_ renderItem geom =
     let
         area = G.areaSize geom
 
-        foldRender : G.Position -> a -> List (Html msg) -> List (Html msg)
+        foldRender : G.Position -> a -> List (Svg msg) -> List (Svg msg)
         foldRender pos a list =
             renderItem pos a :: list
 
@@ -64,16 +43,10 @@ forestGeometry defs_ renderItem geom =
             <| geom
 
 
-forest : Options msg a -> (G.Position -> a -> Html msg) -> (a -> { width : Float, height : Float }) -> Tree.Forest a -> Svg msg
-forest ( defs_, way ) renderItem itemSize =
+{-| Calculate `Geometry` of the `Forest` using the function that returns size of ech item, and then render it using the rendering function -}
+forest : Defs msg -> Way a -> (G.Position -> a -> Svg msg) -> (a -> { width : Float, height : Float }) -> Tree.Forest a -> Svg msg
+forest defs_ way renderItem itemSize =
     -- let geometry = G.add itemSize f
     -- in ( geometry, forestGeometry renderItem geometry )
-    forestGeometry defs_ renderItem
-    << makeGeometry ( defs_, way ) itemSize
-
-
-makeGeometry : Options msg a -> (a -> { width : Float, height : Float }) -> Tree.Forest a -> G.Geometry a
-makeGeometry ( defs_, way ) itemSize =
-    case way of
-            Vertical vopts -> GV.make vopts itemSize
-            Radial ropts -> GR.make ropts itemSize
+    geometry defs_ renderItem
+    << Geometry.make way itemSize

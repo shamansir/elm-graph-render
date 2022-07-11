@@ -6,9 +6,10 @@
     "version": "1.0.0",
     "exposed-modules": [
         "Graph.Geometry",
+        "Graph.Geometry.Make",
         "Graph.Geometry.Radial",
         "Graph.Geometry.Vertical",
-        "Graph.Render.Svg.Forest",
+        "Graph.Render.Svg.Defs",
         "Graph.Render.Svg.Graph"
     ],
     "elm-version": "0.19.1 <= v < 0.20.0",

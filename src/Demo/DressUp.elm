@@ -3,13 +3,13 @@ module Demo.DressUp exposing (..)
 
 import Browser
 import IntDict as ID exposing (IntDict)
-import Html as H exposing (Html)
-import Svg as S
+import Html exposing (Html)
+import Svg as S exposing (Svg)
 import Svg.Attributes as SA
 
 import Graph as G exposing (Graph)
 import Graph.Geometry as Geom
-import Graph.Render.Svg.Forest as Render
+import Graph.Geometry.Make as Geom
 import Graph.Render.Svg.Graph as Render
 
 
@@ -61,7 +61,7 @@ size = { width = 60, height = 60 }
 
 
 
-renderEdges : Geom.Position -> Render.NodesPositions -> G.Adjacency () -> Html msg
+renderEdges : Geom.Position -> Render.NodesPositions -> G.Adjacency () -> Svg msg
 renderEdges from nodesPositions =
     S.g [] << List.map Tuple.second << ID.toList << ID.map
         (\otherNodeId _ ->
@@ -83,7 +83,7 @@ renderEdges from nodesPositions =
         )
 
 
-renderNode : Geom.Position -> Render.NodesPositions -> G.NodeContext String () -> Html msg
+renderNode : Geom.Position -> Render.NodesPositions -> G.NodeContext String () -> Svg msg
 renderNode pos nodesPositions { node, outgoing } =
     S.g
         []
@@ -118,7 +118,7 @@ renderNode pos nodesPositions { node, outgoing } =
 view : Model -> Html msg
 view model =
     Render.graph
-        Render.defaultOptions
+        Geom.defaultWay
         renderNode
         (always size)
         model
