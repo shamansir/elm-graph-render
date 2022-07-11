@@ -20,7 +20,11 @@ import Graph.Geometry.Vertical as GV
 import Graph.Geometry.Radial as GR
 
 
-{-| Direction of the graph -}
+{-| The way graph is distributed.
+
+For `Vertical` way, provide options from `Graph.Geometry.Vertical`, and for `Radial`, the ones
+from `Graph.Geometry.Radial`, correspondingly.
+-}
 type Way a
     = Vertical GV.Options
     | Radial (GR.Options a)

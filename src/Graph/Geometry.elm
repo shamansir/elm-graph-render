@@ -89,7 +89,7 @@ To build up `Geometry a` from `Tree.Forest a`, use one of:
 
 * `Graph.Geometry.Vertical.make` - positions are calculated as the vertical flow from top to bottom;
 * `Graph.Geometry.Radial.make` - positions are calculated as spreading radially from center to the radius;
-* `Graph.Geometry.make` - combines both ways;
+* `Graph.Geometry.Make.make` - combines both ways;
 -}
 type alias Geometry a = ( AreaSize, Tree.Forest (Position, a) )
 

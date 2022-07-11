@@ -1,4 +1,4 @@
-# elm-graph-visualize
+# elm-graph-render
 
 Visualize Graphs in SVG.
 
