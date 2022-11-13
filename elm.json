@@ -3,7 +3,7 @@
     "name": "shamansir/elm-graph-render",
     "summary": "Render Graphs in SVG",
     "license": "BSD-3-Clause",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "exposed-modules": [
         "Graph.Geometry",
         "Graph.Geometry.Make",
@@ -19,11 +19,11 @@
         "elm/core": "1.0.5 <= v < 2.0.0",
         "elm/html": "1.0.0 <= v < 2.0.0",
         "elm/svg": "1.0.1 <= v < 2.0.0",
-        "elm-community/graph": "6.0.0 <= v < 7.0.0",
-        "elm-community/intdict": "3.0.0 <= v < 4.0.0",
         "elm/time": "1.0.0 <= v < 2.0.0",
         "elm/url": "1.0.0 <= v < 2.0.0",
-        "elm/virtual-dom": "1.0.2 <= v < 2.0.0"
+        "elm/virtual-dom": "1.0.2 <= v < 2.0.0",
+        "elm-community/graph": "6.0.0 <= v < 7.0.0",
+        "elm-community/intdict": "3.0.0 <= v < 4.0.0"
     },
     "test-dependencies": {}
 }
