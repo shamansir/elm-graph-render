@@ -21,8 +21,8 @@ import Graph.Geometry.Make as Geometry
 import Graph.Render.Svg.Defs exposing (Defs, unDefs)
 
 {-| Render precalculated Geometry (apply positions of the items) using the rendering function. -}
-geometry : Defs msg -> (G.Position -> a -> Svg msg) -> G.Geometry a -> Svg msg
-geometry defs_ renderItem geom =
+geometry : List (Html.Attribute msg) -> Defs msg -> (G.Position -> a -> Svg msg) -> G.Geometry a -> Svg msg
+geometry attrs defs_ renderItem geom =
     let
         area = G.areaSize geom
 
@@ -32,9 +32,11 @@ geometry defs_ renderItem geom =
 
     in
         Svg.svg
-                [ Svg.width <| String.fromFloat <| area.width + 5
-                , Svg.height <| String.fromFloat <| area.height + 5
-                ]
+                (
+                    [ Svg.width <| String.fromFloat <| area.width + 5
+                    , Svg.height <| String.fromFloat <| area.height + 5
+                    ] ++ attrs
+                )
             <| ((::) (Svg.defs [] <| unDefs defs_))
             <| List.singleton
             <| Svg.g []
@@ -44,9 +46,9 @@ geometry defs_ renderItem geom =
 
 
 {-| Calculate `Geometry` of the `Forest` using the function that returns size of ech item, and then render it using the rendering function -}
-forest : Defs msg -> Way a -> (G.Position -> a -> Svg msg) -> (a -> { width : Float, height : Float }) -> Tree.Forest a -> Svg msg
-forest defs_ way renderItem itemSize =
+forest : List (Html.Attribute msg) -> Defs msg -> Way a -> (G.Position -> a -> Svg msg) -> (a -> { width : Float, height : Float }) -> Tree.Forest a -> Svg msg
+forest attrs defs_ way renderItem itemSize =
     -- let geometry = G.add itemSize f
     -- in ( geometry, forestGeometry renderItem geometry )
-    geometry defs_ renderItem
+    geometry attrs defs_ renderItem
     << Geometry.make way itemSize

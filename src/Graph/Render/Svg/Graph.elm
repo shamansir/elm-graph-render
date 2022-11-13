@@ -1,10 +1,10 @@
-module Graph.Render.Svg.Graph exposing (graph, graphWithDefs, NodesPositions)
+module Graph.Render.Svg.Graph exposing (graph, graphWith, graphWithDefs, fromGeometry, NodesPositions)
 
 {-|
 
 # Rendering
 
-@docs graph, graphWithDefs
+@docs graph, graphWithDefs, graphWith, fromGeometry
 
 # Nodes Positions
 
@@ -41,7 +41,7 @@ graph
     -> Graph n e
     -> Svg msg
 graph =
-    graphWithDefs D.noDefs
+    graphWith <| always <| always ( [], D.noDefs )
 
 
 {-| Render the graph as SVG. Same as above but you can also provide `Defs` to put in the `<def>`...`</def>` section of the SVG. Useful for re-usable items like arrows supposed to represent edges of a graph. -}
@@ -52,7 +52,20 @@ graphWithDefs
     -> (n -> { width : Float, height : Float })
     -> Graph n e
     -> Svg msg
-graphWithDefs defs way renderNode sizeOfNode g =
+graphWithDefs defs =
+    graphWith <| always <| always ( [], defs )
+
+
+{-| Render the graph as SVG. Same as above but you can also provide attributes for the SVG and `Defs` to put in the `<def>`...`</def>` section of that SVG. Latter is useful for re-usable items like arrows supposed to represent edges of a graph. -}
+
+graphWith
+    :  (Geom.AreaSize -> NodesPositions -> ( List (Html.Attribute msg), D.Defs msg ))
+    -> Way (Graph.NodeContext n e)
+    -> (Geom.Position -> NodesPositions -> Graph.NodeContext n e -> Svg msg) --
+    -> (n -> { width : Float, height : Float })
+    -> Graph n e
+    -> Svg msg
+graphWith defsFn way renderNode sizeOfNode g =
     let
         forest = Graph.dfsForest (G.noParentsNodes g) g
         forestGeom = Geom.make way (.node >> .label >> sizeOfNode) forest -- Geom.addForest (.node >> .label >> sizeOfNode) forest
@@ -61,8 +74,10 @@ graphWithDefs defs way renderNode sizeOfNode g =
                 |> Geom.fold (\pos ctx list -> ( ctx.node.id, pos ) :: list) []
                 |> List.concat
                 |> ID.fromList
+        ( attrs, defs ) = defsFn (Tuple.first forestGeom) positions
     in
-    Render.geometry
+    fromGeometry
+        attrs
         defs
         (\pos -> renderNode pos positions)
         forestGeom
@@ -73,6 +88,11 @@ graphWithDefs defs way renderNode sizeOfNode g =
         (.node >> .label >> sizeOfNode)
         <| Graph.dfsForest (G.noParentsNodes g) g
     -}
+
+
+{-| Render geometry which may be constructed for `Graph.Forest a` using `Graph.Geometry.make` -}
+fromGeometry : List (Html.Attribute msg) -> D.Defs msg -> (Geom.Position -> a -> Svg msg) -> Geom.Geometry a -> Svg msg
+fromGeometry = Render.geometry
 
 
 graph_

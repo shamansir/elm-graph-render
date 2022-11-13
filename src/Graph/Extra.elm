@@ -1,10 +1,17 @@
-module Graph.Extra exposing (..)
+module Graph.Extra exposing
+    (filter, filterMap, noParentsNodes)
+
+{-| Extra helpers for Graph.
+
+@docs filter, filterMap, noParentsNodes
+-}
 
 
 import Graph exposing (Graph)
 import Dict
 
 
+{-| Map nodes and remove those for which function returns `Nothing`. -}
 filterMap : (n1 -> Maybe n2) -> Graph n1 e -> Graph n2 e
 filterMap filterFn graph =
     let
@@ -20,6 +27,7 @@ filterMap filterFn graph =
         edges
 
 
+{-| Remove nodes that don't satisfy the predicate. -}
 filter : (n -> Bool) -> Graph n e -> Graph n e
 filter filterFn graph =
     let
@@ -31,6 +39,7 @@ filter filterFn graph =
         edges
 
 
+{-| Get a list of nodes with no parents. -}
 noParentsNodes : Graph n e -> List Graph.NodeId
 noParentsNodes g =
     let
